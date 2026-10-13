@@ -7,6 +7,7 @@ host-tests: $(BUILD)/test-header $(BUILD)/test-memory $(BUILD)/test-arm9-state $
 	$(BUILD)/test-header
 	$(BUILD)/test-memory
 	$(BUILD)/test-arm9-state
+	$(BUILD)/test-arm9-interpreter
 $(BUILD):
 	mkdir -p $(BUILD)
 $(BUILD)/test-header: tests/test_nds_header.cpp src/cartridge/nds_header.cpp src/cartridge/nds_header.h | $(BUILD)
