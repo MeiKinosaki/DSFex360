@@ -1,0 +1,35 @@
+name: Xenon cloud build
+on:
+  workflow_dispatch:
+  push:
+    branches: [v0.2b-stage20-snapshot]
+    paths:
+      - 'src/**'
+      - 'Makefile.xenon'
+      - '.github/workflows/xenon-cloud-build.yml'
+jobs:
+  build-xenon-elf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout DSFex360
+        uses: actions/checkout@v4
+      - name: Build ELF with libxenon container
+        run: |
+          mkdir -p build
+          docker run --rm \
+            -v "$PWD:/app" \
+            -w /app \
+            free60/libxenon:latest \
+            bash -lc 'export DEVKITXENON=/usr/local/xenon; export PATH="$PATH:$DEVKITXENON/bin:$DEVKITXENON/usr/bin"; make -f Makefile.xenon clean all'
+      - name: Verify executable artifact
+        run: |
+          test -s build/DSFex360.elf
+          file build/DSFex360.elf
+          readelf -h build/DSFex360.elf
+      - name: Upload Xenon ELF
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSFex360-v0.2b-Xenon-ELF
+          path: build/DSFex360.elf
+          if-no-files-found: error
+          retention-days: 30

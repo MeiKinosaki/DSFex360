@@ -1,0 +1,32 @@
+# Cloud build for Xbox 360 RGH using the public libxenon toolchain image.
+DEVKITXENON ?= /usr/local/xenon
+XENON_CXX ?= xenon-g++
+OUT ?= build/DSFex360.elf
+
+SOURCES := \
+ src/platform/xenon_main.cpp \
+ src/arm9/arm9_state.cpp \
+ src/arm9/arm9_interpreter.cpp \
+ src/memory/address_space.cpp \
+ src/cartridge/nds_header.cpp \
+ src/cartridge/nds_loader.cpp
+
+CXXFLAGS := -std=gnu++11 -O2 -Wall -Wextra -DXENON -m32 -maltivec -fno-pic -mpowerpc64 -mhard-float -I$(DEVKITXENON)/usr/include
+LDFLAGS := -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -Wl,-T,$(DEVKITXENON)/app.lds -Wl,-n
+LIBS := -lxenon
+
+.PHONY: all clean check-toolchain
+all: check-toolchain $(OUT)
+
+check-toolchain:
+	@command -v $(XENON_CXX) >/dev/null || (echo "ERROR: $(XENON_CXX) not found; use the free60/libxenon container" >&2; exit 1)
+	@test -f "$(DEVKITXENON)/app.lds" || (echo "ERROR: $(DEVKITXENON)/app.lds not found" >&2; exit 1)
+
+$(OUT): $(SOURCES) | build
+	$(XENON_CXX) $(CXXFLAGS) $(SOURCES) $(LDFLAGS) $(LIBS) -o $@
+
+build:
+	mkdir -p build
+
+clean:
+	rm -f $(OUT)

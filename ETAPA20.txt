@@ -1,0 +1,12 @@
+DSFex360 v0.2b — Etapa 20
+
+Adicionado:
+- Avaliação de condições ARM EQ/NE/CS/CC/MI/PL/VS/VC/HI/LS/GE/LT/GT/LE/AL.
+- Execução sem efeitos colaterais quando a condição de uma instrução imediata suportada não passa.
+- Decodificador Operand2 separado para shifts imediatos LSL, LSR, ASR, ROR e RRX.
+- Testes para shifts e execução condicional.
+
+Limites:
+- O decodificador de shifts ainda não está integrado ao executor de instruções de processamento de dados com operando de registrador.
+- Não há fetch/loop de PC completo, Thumb completo, ARM7, vídeo/áudio ou mapa completo do DS.
+- Testes host não validam compilação Xenon, ELF/XEX ou execução em Xbox 360.

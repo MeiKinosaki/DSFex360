@@ -1,0 +1,50 @@
+#include "arm9_interpreter.h"
+namespace dsfex360 { namespace {
+std::uint32_t ror(std::uint32_t v,unsigned n){n&=31u;return n==0u?v:(v>>n)|(v<<(32u-n));}
+void nz(Arm9State*s,std::uint32_t r){s->set_flag(Arm9State::Negative,(r&0x80000000u)!=0u);s->set_flag(Arm9State::Zero,r==0u);}
+void addf(Arm9State*s,std::uint32_t a,std::uint32_t b,std::uint32_t r){std::uint64_t w=std::uint64_t(a)+b;s->set_flag(Arm9State::Carry,(w>>32)!=0u);s->set_flag(Arm9State::Overflow,((~(a^b)&(a^r))&0x80000000u)!=0u);nz(s,r);}
+void subf(Arm9State*s,std::uint32_t a,std::uint32_t b,std::uint32_t r){s->set_flag(Arm9State::Carry,a>=b);s->set_flag(Arm9State::Overflow,(((a^b)&(a^r))&0x80000000u)!=0u);nz(s,r);}
+bool supported(unsigned op){return op==0u||op==1u||op==2u||op==4u||op==10u||op==12u||op==13u;}
+}
+bool arm_condition_passed(unsigned c,const Arm9State*s){if(!s||c>14u)return false;bool n=s->flag(Arm9State::Negative),z=s->flag(Arm9State::Zero),carry=s->flag(Arm9State::Carry),v=s->flag(Arm9State::Overflow);switch(c){case 0:return z;case 1:return !z;case 2:return carry;case 3:return !carry;case 4:return n;case 5:return !n;case 6:return v;case 7:return !v;case 8:return carry&&!z;case 9:return !carry||z;case 10:return n==v;case 11:return n!=v;case 12:return !z&&(n==v);case 13:return z||(n!=v);case 14:return true;default:return false;}}
+bool decode_arm_register_shifted_operand(std::uint32_t i,const Arm9State*s,std::uint32_t*out,bool*co){
+ if(!s||!out||!co||((i>>26)&3u)!=0u||((i>>25)&1u)!=0u||((i>>4)&1u)!=0u||(i>>28)>=15u)return false;
+ unsigned rm=i&15u,t=(i>>5)&3u,a=(i>>7)&31u;std::uint32_t x=0;
+ if(rm==Arm9State::kPcRegister||!s->read_register(rm,&x))return false;
+ bool c=s->flag(Arm9State::Carry);std::uint32_t r=x;
+ switch(t){
+ case 0:if(a){c=((x>>(32u-a))&1u)!=0u;r=x<<a;}break;
+ case 1:if(!a){c=(x&0x80000000u)!=0u;r=0;}else{c=((x>>(a-1u))&1u)!=0u;r=x>>a;}break;
+ case 2:if(!a){c=(x&0x80000000u)!=0u;r=c?0xFFFFFFFFu:0u;}else{c=((x>>(a-1u))&1u)!=0u;r=(x&0x80000000u)?((x>>a)|(0xFFFFFFFFu<<(32u-a))):(x>>a);}break;
+ case 3:if(!a){r=(s->flag(Arm9State::Carry)?0x80000000u:0u)|(x>>1u);c=(x&1u)!=0u;}else{r=ror(x,a);c=(r&0x80000000u)!=0u;}break;
+ }
+ *out=r;*co=c;return true;
+}
+bool execute_arm_data_processing_immediate(std::uint32_t i,Arm9State*s){
+ if(!s||((i>>25)&7u)!=1u)return false;unsigned cond=i>>28;if(cond==15u)return false;
+ unsigned op=(i>>21)&15u;if(!supported(op))return false;if(!arm_condition_passed(cond,s))return true;
+ bool sf=((i>>20)&1u)!=0u;unsigned rn=(i>>16)&15u,rd=(i>>12)&15u,rot=((i>>8)&15u)*2u;
+ std::uint32_t imm=ror(i&255u,rot),left=0;if(rd==15u||((op!=13u)&&(op!=10u)&&rn==15u))return false;
+ if(op!=13u&&!s->read_register(rn,&left))return false;
+ std::uint32_t r=0;bool writes=true,arith=false;
+ switch(op){case 0:r=left&imm;break;case 1:r=left^imm;break;case 2:r=left-imm;arith=true;break;case 4:r=left+imm;arith=true;break;case 10:r=left-imm;arith=true;writes=false;break;case 12:r=left|imm;break;case 13:r=imm;break;default:return false;}
+ if(writes&&!s->write_register(rd,r))return false;
+ if(sf||op==10){if(arith&&(op==2||op==10))subf(s,left,imm,r);else if(arith)addf(s,left,imm,r);else{nz(s,r);if(rot)s->set_flag(Arm9State::Carry,(imm&0x80000000u)!=0u);}}
+ return true;
+}
+bool execute_arm_data_processing_register(std::uint32_t i,Arm9State*s){
+ if(!s||((i>>26)&3u)!=0u||((i>>25)&1u)!=0u||((i>>4)&1u)!=0u)return false;
+ unsigned cond=i>>28;if(cond==15u)return false;unsigned op=(i>>21)&15u;if(!supported(op))return false;
+ if(!arm_condition_passed(cond,s))return true;
+ unsigned rn=(i>>16)&15u,rd=(i>>12)&15u;bool set=((i>>20)&1u)!=0u;
+ if(rd==15u||((op!=13u)&&(op!=10u)&&rn==15u))return false;
+ std::uint32_t operand=0,left=0;bool shifter_carry=false;
+ if(!decode_arm_register_shifted_operand(i,s,&operand,&shifter_carry))return false;
+ if(op!=13u&&!s->read_register(rn,&left))return false;
+ std::uint32_t result=0;bool writes=true,arith=false;
+ switch(op){case 0:result=left&operand;break;case 1:result=left^operand;break;case 2:result=left-operand;arith=true;break;case 4:result=left+operand;arith=true;break;case 10:result=left-operand;arith=true;writes=false;break;case 12:result=left|operand;break;case 13:result=operand;break;default:return false;}
+ if(writes&&!s->write_register(rd,result))return false;
+ if(set||op==10){if(op==2u||op==10u)subf(s,left,operand,result);else if(op==4u)addf(s,left,operand,result);else{nz(s,result);s->set_flag(Arm9State::Carry,shifter_carry);}}
+ return true;
+}
+}
