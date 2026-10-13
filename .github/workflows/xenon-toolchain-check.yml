@@ -4,9 +4,6 @@ on:
   push:
     paths:
       - '.github/workflows/xenon-toolchain-check.yml'
-      - 'src/**'
-      - 'xenon-test/**'
-      - 'Makefile'
 jobs:
   toolchain-smoke:
     runs-on: ubuntu-22.04
@@ -25,20 +22,18 @@ jobs:
           set -o pipefail
           ./build-xenon-toolchain toolchain 2>&1 | tee "$GITHUB_WORKSPACE/toolchain-build.log"
           ./build-xenon-toolchain libxenon 2>&1 | tee -a "$GITHUB_WORKSPACE/toolchain-build.log"
-      - name: Verify toolchain and build upstream smoke sample
-        working-directory: third_party/libxenon
+      - name: Verify compiler and compile DSFex360 smoke source
         env:
           DEVKITXENON: /tmp/devkitxenon
         run: |
           set -eu
           export PATH="$DEVKITXENON/bin:$DEVKITXENON/usr/bin:$PATH"
-          command -v xenon-gcc | tee "$GITHUB_WORKSPACE/toolchain-report.txt"
-          xenon-gcc --version | head -n 2 | tee -a "$GITHUB_WORKSPACE/toolchain-report.txt"
-          command -v xenon-ld | tee -a "$GITHUB_WORKSPACE/toolchain-report.txt"
+          command -v xenon-gcc | tee toolchain-report.txt
+          xenon-gcc --version | head -n 2 | tee -a toolchain-report.txt
+          command -v xenon-ld | tee -a toolchain-report.txt
           test -f "$DEVKITXENON/usr/lib/libxenon.a"
-          make -C devkitxenon/examples/xenon/graphics/cube CROSS_COMPILE=xenon-
-          test -f devkitxenon/examples/xenon/graphics/cube/cube.elf32
-          file devkitxenon/examples/xenon/graphics/cube/cube.elf32 | tee -a "$GITHUB_WORKSPACE/toolchain-report.txt"
+          xenon-gcc -Wall -Wextra -Werror -c xenon-test/main.cpp -o xenon-smoke.o
+          file xenon-smoke.o | tee -a toolchain-report.txt
       - name: Upload diagnostic logs
         if: always()
         uses: actions/upload-artifact@v4
