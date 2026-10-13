@@ -1,0 +1,14 @@
+DSFex360 v0.2b — Etapa 21
+
+Implementado nesta etapa:
+- Novo executor parcial de processamento de dados ARM-state com Operand2 de registrador.
+- Integração com os shifts imediatos já decodificados: LSL, LSR, ASR, ROR e RRX.
+- Suporte a AND, EOR, SUB, ADD, CMP, ORR e MOV dentro deste executor.
+- Respeito às condições ARM; instruções com condição falsa não alteram registradores nem flags.
+- Atualização de N/Z/C/V para operações lógicas e aritméticas suportadas.
+- Testes adicionais de ADD, MOV deslocado, SUB, CMP e condição EQ falsa.
+
+Limitações:
+- O conjunto de instruções segue parcial.
+- Shifts por registrador, PC como operando, branches, load/store completos, Thumb e ARM7 não são implementados por esta etapa.
+- A CI testa apenas o build/teste de host; não valida toolchain Xenon, ELF/XEX nem hardware Xbox 360 RGH.
