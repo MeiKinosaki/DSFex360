@@ -1,0 +1,10 @@
+#include "nds_header.h"
+#include <cctype>
+namespace dsfex360 {namespace {
+const std::size_t kMin=0x160;
+std::uint32_t u32(const std::vector<std::uint8_t>&d,std::size_t o){return std::uint32_t(d[o])|(std::uint32_t(d[o+1])<<8)|(std::uint32_t(d[o+2])<<16)|(std::uint32_t(d[o+3])<<24);}
+std::string str(const std::vector<std::uint8_t>&d,std::size_t o,std::size_t n){std::string s;for(std::size_t i=0;i<n&&d[o+i];++i)s.push_back(char(d[o+i]));while(!s.empty()&&std::isspace(static_cast<unsigned char>(s.back())))s.pop_back();return s;}
+bool fits(std::uint32_t o,std::uint32_t n,std::size_t total){return n!=0&&o<total&&std::uint64_t(o)+n<=total;}
+HeaderParseResult fail(HeaderError e){HeaderParseResult r={};r.error=e;return r;}}
+HeaderParseResult parse_nds_header(const std::vector<std::uint8_t>&rom){if(rom.size()<kMin)return fail(HeaderError::HeaderTooSmall);HeaderParseResult r={};r.error=HeaderError::None;auto&h=r.header;h.title=str(rom,0,12);h.game_code=str(rom,12,4);h.maker_code=str(rom,16,2);h.unit_code=rom[0x12];h.device_capacity=rom[0x14];h.arm9_rom_offset=u32(rom,0x20);h.arm9_entry_address=u32(rom,0x24);h.arm9_load_address=u32(rom,0x28);h.arm9_size=u32(rom,0x2C);h.arm7_rom_offset=u32(rom,0x30);h.arm7_entry_address=u32(rom,0x34);h.arm7_load_address=u32(rom,0x38);h.arm7_size=u32(rom,0x3C);if(h.title.empty())return fail(HeaderError::EmptyTitle);if(h.game_code.empty())return fail(HeaderError::EmptyGameCode);if(!fits(h.arm9_rom_offset,h.arm9_size,rom.size()))return fail(HeaderError::InvalidArm9Range);if(!fits(h.arm7_rom_offset,h.arm7_size,rom.size()))return fail(HeaderError::InvalidArm7Range);return r;}
+const char* header_error_message(HeaderError e){switch(e){case HeaderError::None:return "no error";case HeaderError::HeaderTooSmall:return "ROM is smaller than the 0x160-byte DS header";case HeaderError::EmptyTitle:return "header title is empty";case HeaderError::EmptyGameCode:return "header game code is empty";case HeaderError::InvalidArm9Range:return "ARM9 ROM range is outside the ROM buffer";case HeaderError::InvalidArm7Range:return "ARM7 ROM range is outside the ROM buffer";}return "unknown error";}}
