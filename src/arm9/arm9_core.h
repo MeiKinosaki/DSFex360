@@ -8,7 +8,7 @@ enum class CoreStepResult { Executed,ConditionFailed,UnsupportedInstruction,Fetc
 class Arm9Core {
 public:
  explicit Arm9Core(Arm9State& state);
- CoreStepResult step(const AddressSpace& memory);
+ CoreStepResult step(AddressSpace& memory);
  std::uint64_t instructions_executed() const { return instructions_executed_; }
  std::uint64_t instructions_skipped() const { return instructions_skipped_; }
  std::uint32_t last_instruction() const { return last_instruction_; }
