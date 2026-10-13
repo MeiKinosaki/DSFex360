@@ -3,7 +3,7 @@ CXXFLAGS ?= -std=c++11 -Wall -Wextra -Werror -pedantic
 BUILD := build/host
 .PHONY: test host-tests clean
 test: host-tests
-host-tests: $(BUILD)/test-header $(BUILD)/test-memory $(BUILD)/test-arm9-state
+host-tests: $(BUILD)/test-header $(BUILD)/test-memory $(BUILD)/test-arm9-state $(BUILD)/test-arm9-interpreter
 	$(BUILD)/test-header
 	$(BUILD)/test-memory
 	$(BUILD)/test-arm9-state
@@ -17,3 +17,6 @@ $(BUILD)/test-arm9-state: tests/test_arm9_state.cpp src/arm9/arm9_state.cpp src/
 	$(CXX) $(CXXFLAGS) -Isrc/arm9 tests/test_arm9_state.cpp src/arm9/arm9_state.cpp -o $@
 clean:
 	rm -rf build
+
+$(BUILD)/test-arm9-interpreter: tests/test_arm9_interpreter.cpp src/arm9/arm9_interpreter.cpp src/arm9/arm9_state.cpp src/arm9/arm9_interpreter.h src/arm9/arm9_state.h | $(BUILD)
+	$(CXX) $(CXXFLAGS) -Isrc/arm9 tests/test_arm9_interpreter.cpp src/arm9/arm9_interpreter.cpp src/arm9/arm9_state.cpp -o $@
