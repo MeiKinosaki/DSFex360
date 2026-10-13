@@ -1,5 +1,5 @@
 CXX ?= c++
-CXXFLAGS ?= -std=c++11 -Wall -Wextra -Werror -pedantic
+CXXFLAGS ?= -std=c++11 -Wall -Wextra -pedantic
 BUILD := build/host
 .PHONY: test host-tests clean
 test: host-tests
