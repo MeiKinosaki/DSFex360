@@ -24,5 +24,16 @@ int main(){
  check(core.instructions_executed()==4,"instruction counter tracks executed instructions");
  state.reset(0x02000003u);check(core.step(mem)==CoreStepResult::FetchFault,"unaligned fetch rejected");
  state.reset(0x03000000u);check(core.step(mem)==CoreStepResult::FetchFault,"unmapped fetch rejected");
+ // LDR/STR word immediate and unsigned byte transfer smoke tests.
+ put32(mem,0x02000020u,0xE5810004u); // STR r0,[r1,#4]
+ put32(mem,0x02000024u,0xE5913004u); // LDR r3,[r1,#4]
+ put32(mem,0x02000028u,0xE5C10008u); // STRB r0,[r1,#8]
+ put32(mem,0x0200002Cu,0xE5D14008u); // LDRB r4,[r1,#8]
+ state.reset(0x02000020u);state.write_register(0,0x123456ABu);state.write_register(1,0x02000040u);
+ check(core.step(mem)==CoreStepResult::Executed,"STR word stores register");
+ std::uint8_t stored[4]={};check(mem.read(0x02000044u,stored,4)&&stored[0]==0xAB&&stored[3]==0x12,"STR word uses little endian");
+ check(core.step(mem)==CoreStepResult::Executed,"LDR word loads register");check(get(state,3)==0x123456ABu,"LDR word value correct");
+ check(core.step(mem)==CoreStepResult::Executed,"STRB stores low byte");check(mem.read(0x02000048u,stored,1)&&stored[0]==0xAB,"STRB stores low byte only");
+ check(core.step(mem)==CoreStepResult::Executed,"LDRB loads unsigned byte");check(get(state,4)==0xABu,"LDRB zero extends byte");
  std::cout<<"ARM9 core tests completed\n";return 0;
 }
