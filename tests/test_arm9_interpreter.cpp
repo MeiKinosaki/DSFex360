@@ -12,11 +12,11 @@ c.read_register(3,&v);check(v==6,"SUB result correct");check(!c.flag(Arm9State::
 check(execute_arm_data_processing(c,dp(0,13,false,0,4,0))==StepResult::ConditionFailed,"EQ condition skips when Z clear");
 c.set_flag(Arm9State::Zero,true);check(execute_arm_data_processing(c,dp(0,13,false,0,4,9))==StepResult::Executed,"EQ condition executes when Z set");
 c.read_register(4,&v);check(v==9,"MOV immediate result correct");
-check(execute_arm_data_processing(c,dp(14,10,true,0,0,5))==StepResult::Executed,"CMP executes");
+c.write_register(0,5);check(execute_arm_data_processing(c,dp(14,10,true,0,0,5))==StepResult::Executed,"CMP executes");
 check(c.flag(Arm9State::Zero),"CMP sets zero on equality");
 c.write_register(5,3);const std::uint32_t add_shift=(14u<<28)|(1u<<21)|(5u<<16)|(6u<<12)|(1u<<25)|0u;
 check(execute_arm_data_processing(c,dp(14,0,false,5,6,(1u<<7)|(0u<<5)|5u,false))==StepResult::Executed,"AND register with LSL operand executes");
-c.read_register(6,&v);check(v==0,"AND shifted result correct");
+c.read_register(6,&v);check(v==2,"AND shifted result correct");
 check(execute_arm_data_processing(c,0xE0000000u)==StepResult::Unsupported,"unsupported opcode rejected");
 check(!arm_condition_passed(c,15),"NV condition rejected");
 std::cout<<"ARM9 interpreter smoke checks completed\n";return 0;}
