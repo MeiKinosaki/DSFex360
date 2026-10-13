@@ -3,12 +3,13 @@ CXXFLAGS ?= -std=c++11 -Wall -Wextra -pedantic
 BUILD := build/host
 .PHONY: test host-tests clean
 test: host-tests
-host-tests: $(BUILD)/test-header $(BUILD)/test-memory $(BUILD)/test-arm9-state $(BUILD)/test-arm9-interpreter $(BUILD)/test-nds-loader
+host-tests: $(BUILD)/test-header $(BUILD)/test-memory $(BUILD)/test-arm9-state $(BUILD)/test-arm9-interpreter $(BUILD)/test-nds-loader $(BUILD)/test-arm9-core
 	$(BUILD)/test-header
 	$(BUILD)/test-memory
 	$(BUILD)/test-arm9-state
 	$(BUILD)/test-arm9-interpreter
 	$(BUILD)/test-nds-loader
+	$(BUILD)/test-arm9-core
 $(BUILD):
 	mkdir -p $(BUILD)
 $(BUILD)/test-header: tests/test_nds_header.cpp src/cartridge/nds_header.cpp src/cartridge/nds_header.h | $(BUILD)
@@ -25,3 +26,6 @@ $(BUILD)/test-arm9-interpreter: tests/test_arm9_interpreter.cpp src/arm9/arm9_in
 
 $(BUILD)/test-nds-loader: tests/test_nds_loader.cpp src/cartridge/nds_loader.cpp src/cartridge/nds_header.cpp src/memory/address_space.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -Isrc/cartridge -Isrc/memory tests/test_nds_loader.cpp src/cartridge/nds_loader.cpp src/cartridge/nds_header.cpp src/memory/address_space.cpp -o $@
+
+$(BUILD)/test-arm9-core: tests/test_arm9_core.cpp src/arm9/arm9_core.cpp src/arm9/arm9_interpreter.cpp src/arm9/arm9_state.cpp src/memory/address_space.cpp | $(BUILD)
+	$(CXX) $(CXXFLAGS) -Isrc/arm9 -Isrc/memory tests/test_arm9_core.cpp src/arm9/arm9_core.cpp src/arm9/arm9_interpreter.cpp src/arm9/arm9_state.cpp src/memory/address_space.cpp -o $@
