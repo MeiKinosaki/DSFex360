@@ -1,7 +1,7 @@
 #include "arm9_core.h"
 namespace dsfex360 {
 Arm9Core::Arm9Core(Arm9State& state):state_(state),instructions_executed_(0),instructions_skipped_(0),last_instruction_(0){}
-CoreStepResult Arm9Core::step(const AddressSpace& memory) {
+CoreStepResult Arm9Core::step(AddressSpace& memory) {
  std::uint32_t pc=0;
  if(!state_.read_register(Arm9State::kPcRegister,&pc))return CoreStepResult::FetchFault;
  if((pc&3u)!=0u)return CoreStepResult::FetchFault;
@@ -17,6 +17,33 @@ CoreStepResult Arm9Core::step(const AddressSpace& memory) {
   state_.write_register(Arm9State::kPcRegister,pc+4u);
   ++instructions_skipped_;
   return CoreStepResult::ConditionFailed;
+ }
+ // Single data transfer: immediate-offset LDR/STR (word or byte), pre/post-index.
+ if((ins&0x0C000000u)==0x04000000u && (ins&(1u<<25))==0u) {
+  const bool pre=(ins&(1u<<24))!=0, up=(ins&(1u<<23))!=0;
+  const bool byte=(ins&(1u<<22))!=0, writeback=(ins&(1u<<21))!=0;
+  const bool load=(ins&(1u<<20))!=0;
+  const unsigned rn=(ins>>16)&15u, rd=(ins>>12)&15u;
+  std::uint32_t base=0;
+  if(!state_.read_register(rn,&base))return CoreStepResult::MemoryFault;
+  const std::uint32_t offset=ins&0xFFFu;
+  const std::uint32_t adjusted=up?base+offset:base-offset;
+  const std::uint32_t address=pre?adjusted:base;
+  if(!byte && (address&3u)!=0u)return CoreStepResult::MemoryFault;
+  if(load) {
+   std::uint32_t value=0;
+   if(byte) { std::uint8_t b=0;if(!memory.read(address,&b,1))return CoreStepResult::MemoryFault;value=b; }
+   else { std::uint8_t b[4]={0,0,0,0};if(!memory.read(address,b,4))return CoreStepResult::MemoryFault;value=static_cast<std::uint32_t>(b[0])|(static_cast<std::uint32_t>(b[1])<<8)|(static_cast<std::uint32_t>(b[2])<<16)|(static_cast<std::uint32_t>(b[3])<<24); }
+   if(!state_.write_register(rd,rd==15u?(value&~3u):value))return CoreStepResult::MemoryFault;
+  } else {
+   std::uint32_t value=0;if(!state_.read_register(rd,&value))return CoreStepResult::MemoryFault;
+   if(byte) { const std::uint8_t b=static_cast<std::uint8_t>(value);if(!memory.write(address,&b,1))return CoreStepResult::MemoryFault; }
+   else { const std::uint8_t b[4]={static_cast<std::uint8_t>(value),static_cast<std::uint8_t>(value>>8),static_cast<std::uint8_t>(value>>16),static_cast<std::uint8_t>(value>>24)};if(!const_cast<AddressSpace&>(memory).write(address,b,4))return CoreStepResult::MemoryFault; }
+  }
+  if(!pre||writeback) { if(!state_.write_register(rn,adjusted))return CoreStepResult::MemoryFault; }
+  if(!(load&&rd==15u))state_.write_register(Arm9State::kPcRegister,pc+4u);
+  ++instructions_executed_;
+  return CoreStepResult::Executed;
  }
  if((ins&0x0E000000u)==0x0A000000u) {
   const std::int32_t displacement=static_cast<std::int32_t>(ins<<8)>>6;
