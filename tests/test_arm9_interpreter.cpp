@@ -17,6 +17,6 @@ check(c.flag(Arm9State::Zero),"CMP sets zero on equality");
 c.write_register(5,3);const std::uint32_t add_shift=(14u<<28)|(1u<<21)|(5u<<16)|(6u<<12)|(1u<<25)|0u;
 check(execute_arm_data_processing(c,dp(14,0,false,5,6,(1u<<7)|(0u<<5)|5u,false))==StepResult::Executed,"AND register with LSL operand executes");
 c.read_register(6,&v);check(v==2,"AND shifted result correct");
-check(execute_arm_data_processing(c,0xE0000000u)==StepResult::Unsupported,"unsupported opcode rejected");
+check(execute_arm_data_processing(c,0xE0600000u)==StepResult::Unsupported,"unsupported opcode rejected");
 check(!arm_condition_passed(c,15),"NV condition rejected");
 std::cout<<"ARM9 interpreter smoke checks completed\n";return 0;}
