@@ -35,5 +35,15 @@ int main(){
  check(core.step(mem)==CoreStepResult::Executed,"LDR word loads register");check(get(state,3)==0x123456ABu,"LDR word value correct");
  check(core.step(mem)==CoreStepResult::Executed,"STRB stores low byte");check(mem.read(0x02000048u,stored,1)&&stored[0]==0xAB,"STRB stores low byte only");
  check(core.step(mem)==CoreStepResult::Executed,"LDRB loads unsigned byte");check(get(state,4)==0xABu,"LDRB zero extends byte");
+ // LDMIA/STMIA: two-register lists, ascending memory addresses.
+ put32(mem,0x02000050u,0xE8A10006u); // STMIA r1!,{r1,r2}
+ put32(mem,0x02000054u,0xE8B10018u); // LDMIA r1!,{r3,r4}
+ state.reset(0x02000050u);state.write_register(1,0x02000060u);state.write_register(2,0xCAFEBABEu);
+ check(core.step(mem)==CoreStepResult::Executed,"STMIA executes");
+ check(get(state,1)==0x02000068u,"STMIA writeback advances base");
+ std::uint8_t pair[8]={};check(mem.read(0x02000060u,pair,8)&&pair[0]==0x60&&pair[4]==0xBE,"STMIA writes register list in ascending order");
+ state.write_register(1,0x02000060u);check(core.step(mem)==CoreStepResult::Executed,"LDMIA executes");
+ check(get(state,3)==0x02000060u&&get(state,4)==0xCAFEBABEu,"LDMIA restores listed registers");
+ check(get(state,1)==0x02000068u,"LDMIA writeback advances base");
  std::cout<<"ARM9 core tests completed\n";return 0;
 }
