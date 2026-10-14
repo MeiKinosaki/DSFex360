@@ -18,6 +18,30 @@ CoreStepResult Arm9Core::step(AddressSpace& memory) {
   ++instructions_skipped_;
   return CoreStepResult::ConditionFailed;
  }
+ // Block data transfer: LDM/STM with a non-empty register list (R0-R14).
+ if((ins&0x0E000000u)==0x08000000u) {
+  const bool pre=(ins&(1u<<24))!=0, up=(ins&(1u<<23))!=0;
+  const bool writeback=(ins&(1u<<21))!=0, load=(ins&(1u<<20))!=0;
+  const unsigned rn=(ins>>16)&15u;
+  const std::uint32_t list=ins&0x7FFFu; // PC in list is intentionally not implemented yet.
+  unsigned count=0;for(unsigned r=0;r<15;++r)if(list&(1u<<r))++count;
+  if(count==0)return CoreStepResult::UnsupportedInstruction;
+  std::uint32_t base=0;if(!state_.read_register(rn,&base))return CoreStepResult::MemoryFault;
+  const std::uint32_t delta=static_cast<std::uint32_t>(count*4u);
+  const std::uint32_t first=up?(pre?base+4u:base):(pre?base-delta:base-delta+4u);
+  std::uint32_t loaded[15]={0};unsigned index=0;
+  for(unsigned r=0;r<15;++r)if(list&(1u<<r)){
+   const std::uint32_t address=first+index*4u;
+   if(load){std::uint8_t b[4]={0};if(!memory.read(address,b,4))return CoreStepResult::MemoryFault;loaded[r]=static_cast<std::uint32_t>(b[0])|(static_cast<std::uint32_t>(b[1])<<8)|(static_cast<std::uint32_t>(b[2])<<16)|(static_cast<std::uint32_t>(b[3])<<24);}
+   else {std::uint32_t value=0;if(!state_.read_register(r,&value))return CoreStepResult::MemoryFault;const std::uint8_t b[4]={static_cast<std::uint8_t>(value),static_cast<std::uint8_t>(value>>8),static_cast<std::uint8_t>(value>>16),static_cast<std::uint8_t>(value>>24)};if(!memory.write(address,b,4))return CoreStepResult::MemoryFault;}
+   ++index;
+  }
+  if(load){for(unsigned r=0;r<15;++r)if(list&(1u<<r))state_.write_register(r,loaded[r]);}
+  if(writeback)state_.write_register(rn,up?base+delta:base-delta);
+  state_.write_register(Arm9State::kPcRegister,pc+4u);
+  ++instructions_executed_;
+  return CoreStepResult::Executed;
+ }
  // Single data transfer: immediate-offset LDR/STR (word or byte), pre/post-index.
  if((ins&0x0C000000u)==0x04000000u && (ins&(1u<<25))==0u) {
   const bool pre=(ins&(1u<<24))!=0, up=(ins&(1u<<23))!=0;
