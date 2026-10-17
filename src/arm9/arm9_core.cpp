@@ -13,7 +13,8 @@ CoreStepResult Arm9Core::step(AddressSpace& memory) {
   (static_cast<std::uint32_t>(bytes[3])<<24);
  last_instruction_=ins;
  const std::uint32_t condition=ins>>28;
- if(condition!=15u&&!arm_condition_passed(state_,condition)) {
+ if(condition==15u)return CoreStepResult::UnsupportedInstruction;
+ if(!arm_condition_passed(state_,condition)) {
   state_.write_register(Arm9State::kPcRegister,pc+4u);
   ++instructions_skipped_;
   return CoreStepResult::ConditionFailed;
@@ -23,9 +24,11 @@ CoreStepResult Arm9Core::step(AddressSpace& memory) {
   const bool pre=(ins&(1u<<24))!=0, up=(ins&(1u<<23))!=0;
   const bool writeback=(ins&(1u<<21))!=0, load=(ins&(1u<<20))!=0;
   const unsigned rn=(ins>>16)&15u;
-  const std::uint32_t list=ins&0x7FFFu; // PC in list is intentionally not implemented yet.
+  const std::uint32_t list=ins&0xFFFFu;
+  if((list&(1u<<15))!=0u || rn==15u)return CoreStepResult::UnsupportedInstruction;
   unsigned count=0;for(unsigned r=0;r<15;++r)if(list&(1u<<r))++count;
   if(count==0)return CoreStepResult::UnsupportedInstruction;
+  if(writeback && (list&(1u<<rn))!=0u)return CoreStepResult::UnsupportedInstruction;
   std::uint32_t base=0;if(!state_.read_register(rn,&base))return CoreStepResult::MemoryFault;
   const std::uint32_t delta=static_cast<std::uint32_t>(count*4u);
   const std::uint32_t first=up?(pre?base+4u:base):(pre?base-delta:base-delta+4u);
@@ -62,7 +65,7 @@ CoreStepResult Arm9Core::step(AddressSpace& memory) {
   } else {
    std::uint32_t value=0;if(!state_.read_register(rd,&value))return CoreStepResult::MemoryFault;
    if(byte) { const std::uint8_t b=static_cast<std::uint8_t>(value);if(!memory.write(address,&b,1))return CoreStepResult::MemoryFault; }
-   else { const std::uint8_t b[4]={static_cast<std::uint8_t>(value),static_cast<std::uint8_t>(value>>8),static_cast<std::uint8_t>(value>>16),static_cast<std::uint8_t>(value>>24)};if(!const_cast<AddressSpace&>(memory).write(address,b,4))return CoreStepResult::MemoryFault; }
+   else { const std::uint8_t b[4]={static_cast<std::uint8_t>(value),static_cast<std::uint8_t>(value>>8),static_cast<std::uint8_t>(value>>16),static_cast<std::uint8_t>(value>>24)};if(!memory.write(address,b,4))return CoreStepResult::MemoryFault; }
   }
   if(!pre||writeback) { if(!state_.write_register(rn,adjusted))return CoreStepResult::MemoryFault; }
   if(!(load&&rd==15u))state_.write_register(Arm9State::kPcRegister,pc+4u);
