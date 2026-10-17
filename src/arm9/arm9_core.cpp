@@ -30,8 +30,17 @@ CoreStepResult Arm9Core::step(AddressSpace& memory) {
   if(count==0)return CoreStepResult::UnsupportedInstruction;
   if(writeback && (list&(1u<<rn))!=0u)return CoreStepResult::UnsupportedInstruction;
   std::uint32_t base=0;if(!state_.read_register(rn,&base))return CoreStepResult::MemoryFault;
+  if((base&3u)!=0u)return CoreStepResult::MemoryFault;
   const std::uint32_t delta=static_cast<std::uint32_t>(count*4u);
   const std::uint32_t first=up?(pre?base+4u:base):(pre?base-delta:base-delta+4u);
+  // Preflight the entire transfer before changing memory or registers.
+  unsigned preflight_index=0;
+  for(unsigned r=0;r<15;++r)if(list&(1u<<r)){
+   const std::uint32_t address=first+preflight_index*4u;
+   if(load){std::uint8_t probe[4]={0};if(!memory.read(address,probe,4))return CoreStepResult::MemoryFault;}
+   else if(!memory.can_write(address,4))return CoreStepResult::MemoryFault;
+   ++preflight_index;
+  }
   std::uint32_t loaded[15]={0};unsigned index=0;
   for(unsigned r=0;r<15;++r)if(list&(1u<<r)){
    const std::uint32_t address=first+index*4u;
