@@ -58,5 +58,11 @@ int main(){
  put32(mem,0x02000078u,0xE6000010u);state.reset(0x02000078u);
  check(core.step(mem)==CoreStepResult::UnsupportedInstruction,"unsupported instruction reported");
  check(get(state,15)==0x02000078u,"unsupported instruction preserves PC for diagnosis");
+ // Block store preflight: invalid second word must not partially modify first word.
+ put32(mem,0x02000080u,0xE8820003u); // STMIA r2,{r0,r1}
+ state.reset(0x02000080u);state.write_register(0,0xAAAAAAAAu);state.write_register(1,0xBBBBBBBBu);state.write_register(2,0x020000FCu);
+ std::uint8_t before[4]={};check(mem.read(0x020000FCu,before,4),"read final mapped word before failed transfer");
+ check(core.step(mem)==CoreStepResult::MemoryFault,"block store rejects unmapped second word");
+ std::uint8_t after[4]={};check(mem.read(0x020000FCu,after,4)&&after[0]==before[0]&&after[1]==before[1]&&after[2]==before[2]&&after[3]==before[3],"failed block store leaves memory unchanged");
  std::cout<<"ARM9 core tests completed\n";return 0;
 }
