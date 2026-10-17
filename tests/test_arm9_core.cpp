@@ -45,5 +45,18 @@ int main(){
  state.write_register(1,0x02000060u);check(core.step(mem)==CoreStepResult::Executed,"LDMIA executes");
  check(get(state,3)==0x02000060u&&get(state,4)==0xCAFEBABEu,"LDMIA restores listed registers");
  check(get(state,1)==0x02000068u,"LDMIA writeback advances base");
+ // Conditional execution: EQ should skip MOV when Z is clear.
+ put32(mem,0x02000070u,0x03A05001u);state.reset(0x02000070u);state.set_flag(Arm9State::Zero,false);
+ check(core.step(mem)==CoreStepResult::ConditionFailed,"failed EQ condition skips instruction");
+ check(get(state,5)==0u&&get(state,15)==0x02000074u,"conditional skip leaves destination unchanged");
+ // Post-index transfer updates base after using its old value.
+ put32(mem,0x02000074u,0xE4916004u);state.reset(0x02000074u);state.write_register(1,0x02000040u);
+ put32(mem,0x02000040u,0x76543210u);
+ check(core.step(mem)==CoreStepResult::Executed,"post-index LDR executes");
+ check(get(state,6)==0x76543210u&&get(state,1)==0x02000044u,"post-index LDR loads old base then updates base");
+ // Reject an unsupported instruction without silently advancing PC.
+ put32(mem,0x02000078u,0xE6000010u);state.reset(0x02000078u);
+ check(core.step(mem)==CoreStepResult::UnsupportedInstruction,"unsupported instruction reported");
+ check(get(state,15)==0x02000078u,"unsupported instruction preserves PC for diagnosis");
  std::cout<<"ARM9 core tests completed\n";return 0;
 }
