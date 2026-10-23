@@ -38,11 +38,11 @@ c.write_register(0,0x7FFFFFFFu);
 check(execute_arm_data_processing(c,dp(14,11,true,0,0,1))==StepResult::Executed,"CMN executes");
 check(c.flag(Arm9State::Negative)&&c.flag(Arm9State::Overflow),"CMN updates negative and overflow flags without storing result");
 c.write_register(0,10);c.write_register(1,3);c.set_flag(Arm9State::Carry,true);
-check(execute_arm_data_processing(c,dp(14,6,true,0,11,1))==StepResult::Executed,"SBCS executes");
+check(execute_arm_data_processing(c,dp(14,6,true,0,11,3))==StepResult::Executed,"SBCS executes");
 c.read_register(11,&v);check(v==7u&&c.flag(Arm9State::Carry),"SBC subtracts with carry");
 c.set_flag(Arm9State::Carry,false);
-check(execute_arm_data_processing(c,dp(14,7,true,0,12,1))==StepResult::Executed,"RSCS executes");
-c.read_register(12,&v);check(v==0xFFFFFFF6u,"RSC subtracts operand1 and borrow from operand2");
+check(execute_arm_data_processing(c,dp(14,7,true,0,12,3))==StepResult::Executed,"RSCS executes");
+c.read_register(12,&v);check(v==0xFFFFFFF8u,"RSC subtracts operand1 and borrow from operand2");
 check(execute_arm_data_processing(c,0xE0E00000u)==StepResult::Unsupported,"unsupported opcode rejected");
 check(!arm_condition_passed(c,15),"NV condition rejected");
 std::cout<<"ARM9 interpreter smoke checks completed\n";return 0;}
