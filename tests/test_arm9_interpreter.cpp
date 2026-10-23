@@ -37,6 +37,6 @@ c.read_register(10,&v);check(v==0u&&c.flag(Arm9State::Carry)&&c.flag(Arm9State::
 c.write_register(0,0x7FFFFFFFu);
 check(execute_arm_data_processing(c,dp(14,11,true,0,0,1))==StepResult::Executed,"CMN executes");
 check(c.flag(Arm9State::Negative)&&c.flag(Arm9State::Overflow),"CMN updates negative and overflow flags without storing result");
-check(execute_arm_data_processing(c,0xE0600000u)==StepResult::Unsupported,"unsupported opcode rejected");
+check(execute_arm_data_processing(c,0xE0E00000u)==StepResult::Unsupported,"unsupported opcode rejected");
 check(!arm_condition_passed(c,15),"NV condition rejected");
 std::cout<<"ARM9 interpreter smoke checks completed\n";return 0;}
