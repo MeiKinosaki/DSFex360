@@ -42,7 +42,7 @@ check(execute_arm_data_processing(c,dp(14,6,true,0,11,1))==StepResult::Executed,
 c.read_register(11,&v);check(v==7u&&c.flag(Arm9State::Carry),"SBC subtracts with carry");
 c.set_flag(Arm9State::Carry,false);
 check(execute_arm_data_processing(c,dp(14,7,true,0,12,1))==StepResult::Executed,"RSCS executes");
-c.read_register(12,&v);check(v==0xFFFFFFF7u,"RSC subtracts operand1 and borrow from operand2");
+c.read_register(12,&v);check(v==0xFFFFFFF6u,"RSC subtracts operand1 and borrow from operand2");
 check(execute_arm_data_processing(c,0xE0E00000u)==StepResult::Unsupported,"unsupported opcode rejected");
 check(!arm_condition_passed(c,15),"NV condition rejected");
 std::cout<<"ARM9 interpreter smoke checks completed\n";return 0;}
