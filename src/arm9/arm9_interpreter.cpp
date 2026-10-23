@@ -17,8 +17,8 @@ bool operand2(Arm9State& s,std::uint32_t ins,std::uint32_t* value,bool* carry) {
  return true;
 }
 void set_nz(Arm9State& s,std::uint32_t v){s.set_flag(Arm9State::Negative,(v>>31)!=0);s.set_flag(Arm9State::Zero,v==0);}
-void set_add_flags(Arm9State& s,std::uint32_t a,std::uint32_t b,std::uint32_t result){
- const std::uint64_t wide=static_cast<std::uint64_t>(a)+b+0u;
+void set_add_flags(Arm9State& s,std::uint32_t a,std::uint32_t b,std::uint32_t result,bool carry_in=false){
+ const std::uint64_t wide=static_cast<std::uint64_t>(a)+b+(carry_in?1u:0u);
  s.set_flag(Arm9State::Carry,wide>0xFFFFFFFFull);
  s.set_flag(Arm9State::Overflow,((~(a^b)&(a^result))>>31)!=0);
 }
@@ -46,9 +46,11 @@ StepResult execute_arm_data_processing(Arm9State& s,std::uint32_t ins){
  case 2:result=a-b;arithmetic=true;break; // SUB
  case 3:result=b-a;arithmetic=true;break; // RSB
  case 4:result=a+b;arithmetic=true;break; // ADD
+ case 5:result=a+b+(flag(s,Arm9State::Carry)?1u:0u);arithmetic=true;break; // ADC
  case 8:result=a&b;logical=true;writes=false;break; // TST
  case 9:result=a^b;logical=true;writes=false;break; // TEQ
  case 10:result=a-b;arithmetic=true;writes=false;break; // CMP
+ case 11:result=a+b;arithmetic=true;writes=false;break; // CMN
  case 12:result=a|b;logical=true;break; // ORR
  case 13:result=b;logical=true;break; // MOV
  case 14:result=a&~b;logical=true;break; // BIC
@@ -56,7 +58,7 @@ StepResult execute_arm_data_processing(Arm9State& s,std::uint32_t ins){
  default:return StepResult::Unsupported;
  }
  if(writes&&!s.write_register(rd,result))return StepResult::InvalidRegister;
- if(set_flags||!writes){set_nz(s,result);if(arithmetic){if(opcode==2||opcode==10)set_sub_flags(s,a,b,result);else if(opcode==3)set_sub_flags(s,b,a,result);else set_add_flags(s,a,b,result);}else s.set_flag(Arm9State::Carry,shcarry);}
+ if(set_flags||!writes){set_nz(s,result);if(arithmetic){if(opcode==2||opcode==10)set_sub_flags(s,a,b,result);else if(opcode==3)set_sub_flags(s,b,a,result);else set_add_flags(s,a,b,result,opcode==5&&flag(s,Arm9State::Carry));}else s.set_flag(Arm9State::Carry,shcarry);}
  if(writes&&rd==15u){if(s.read_register(15,&oldpc))s.write_register(15,oldpc&~3u);}
  return StepResult::Executed;
 }
