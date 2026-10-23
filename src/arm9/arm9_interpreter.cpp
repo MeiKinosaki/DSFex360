@@ -22,9 +22,11 @@ void set_add_flags(Arm9State& s,std::uint32_t a,std::uint32_t b,std::uint32_t re
  s.set_flag(Arm9State::Carry,wide>0xFFFFFFFFull);
  s.set_flag(Arm9State::Overflow,((~(a^b)&(a^result))>>31)!=0);
 }
-void set_sub_flags(Arm9State& s,std::uint32_t a,std::uint32_t b,std::uint32_t result){
- s.set_flag(Arm9State::Carry,a>=b);
- s.set_flag(Arm9State::Overflow,(((a^b)&(a^result))>>31)!=0);
+void set_sub_flags(Arm9State& s,std::uint32_t a,std::uint32_t b,std::uint32_t result,bool borrow_in=false){
+ const std::uint64_t subtrahend=static_cast<std::uint64_t>(b)+(borrow_in?1u:0u);
+ s.set_flag(Arm9State::Carry,static_cast<std::uint64_t>(a)>=subtrahend);
+ const std::uint32_t effective_b=b+(borrow_in?1u:0u);
+ s.set_flag(Arm9State::Overflow,(((a^effective_b)&(a^result))>>31)!=0);
 }
 }
 bool arm_condition_passed(const Arm9State& s,std::uint32_t c){
@@ -47,6 +49,8 @@ StepResult execute_arm_data_processing(Arm9State& s,std::uint32_t ins){
  case 3:result=b-a;arithmetic=true;break; // RSB
  case 4:result=a+b;arithmetic=true;break; // ADD
  case 5:result=a+b+(flag(s,Arm9State::Carry)?1u:0u);arithmetic=true;break; // ADC
+ case 6:result=a-b-(flag(s,Arm9State::Carry)?0u:1u);arithmetic=true;break; // SBC
+ case 7:result=b-a-(flag(s,Arm9State::Carry)?0u:1u);arithmetic=true;break; // RSC
  case 8:result=a&b;logical=true;writes=false;break; // TST
  case 9:result=a^b;logical=true;writes=false;break; // TEQ
  case 10:result=a-b;arithmetic=true;writes=false;break; // CMP
@@ -58,7 +62,7 @@ StepResult execute_arm_data_processing(Arm9State& s,std::uint32_t ins){
  default:return StepResult::Unsupported;
  }
  if(writes&&!s.write_register(rd,result))return StepResult::InvalidRegister;
- if(set_flags||!writes){set_nz(s,result);if(arithmetic){if(opcode==2||opcode==10)set_sub_flags(s,a,b,result);else if(opcode==3)set_sub_flags(s,b,a,result);else set_add_flags(s,a,b,result,opcode==5&&flag(s,Arm9State::Carry));}else s.set_flag(Arm9State::Carry,shcarry);}
+ if(set_flags||!writes){set_nz(s,result);if(arithmetic){if(opcode==2||opcode==10)set_sub_flags(s,a,b,result);else if(opcode==3)set_sub_flags(s,b,a,result);else if(opcode==6)set_sub_flags(s,a,b,result,!flag(s,Arm9State::Carry));else if(opcode==7)set_sub_flags(s,b,a,result,!flag(s,Arm9State::Carry));else set_add_flags(s,a,b,result,opcode==5&&flag(s,Arm9State::Carry));}else s.set_flag(Arm9State::Carry,shcarry);}
  if(writes&&rd==15u){if(s.read_register(15,&oldpc))s.write_register(15,oldpc&~3u);}
  return StepResult::Executed;
 }
