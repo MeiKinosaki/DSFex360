@@ -26,6 +26,11 @@ check(execute_arm_data_processing(c,dp(14,8,true,0,0,1))==StepResult::Executed,"
 check(c.flag(Arm9State::Zero),"TST updates flags without writing result");
 check(execute_arm_data_processing(c,dp(14,9,true,0,0,1))==StepResult::Executed,"TEQ executes");
 check(!c.flag(Arm9State::Zero),"TEQ updates flags from XOR result");
+c.write_register(0,0xFFu);
+check(execute_arm_data_processing(c,dp(14,14,false,0,8,0x0Fu))==StepResult::Executed,"BIC executes");
+c.read_register(8,&v);check(v==0xF0u,"BIC clears selected bits");
+check(execute_arm_data_processing(c,dp(14,15,false,0,9,0x0Fu))==StepResult::Executed,"MVN executes");
+c.read_register(9,&v);check(v==0xFFFFFFF0u,"MVN bitwise complements operand");
 check(execute_arm_data_processing(c,0xE0600000u)==StepResult::Unsupported,"unsupported opcode rejected");
 check(!arm_condition_passed(c,15),"NV condition rejected");
 std::cout<<"ARM9 interpreter smoke checks completed\n";return 0;}
