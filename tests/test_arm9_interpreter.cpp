@@ -22,7 +22,7 @@ check(execute_arm_data_processing(c,dp(14,3,true,0,7,5))==StepResult::Executed,"
 c.read_register(7,&v);check(v==3u,"RSB computes operand2 minus operand1");
 check(c.flag(Arm9State::Carry),"RSB sets no-borrow carry correctly");
 c.write_register(0,0x0Fu);c.write_register(1,0x03u);
-check(execute_arm_data_processing(c,dp(14,8,true,0,0,1))==StepResult::Executed,"TST executes");
+check(execute_arm_data_processing(c,dp(14,8,true,0,0,0x10))==StepResult::Executed,"TST executes");
 check(c.flag(Arm9State::Zero),"TST updates flags without writing result");
 check(execute_arm_data_processing(c,dp(14,9,true,0,0,1))==StepResult::Executed,"TEQ executes");
 check(!c.flag(Arm9State::Zero),"TEQ updates flags from XOR result");
