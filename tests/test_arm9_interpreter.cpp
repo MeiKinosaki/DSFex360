@@ -31,6 +31,12 @@ check(execute_arm_data_processing(c,dp(14,14,false,0,8,0x0Fu))==StepResult::Exec
 c.read_register(8,&v);check(v==0xF0u,"BIC clears selected bits");
 check(execute_arm_data_processing(c,dp(14,15,false,0,9,0x0Fu))==StepResult::Executed,"MVN executes");
 c.read_register(9,&v);check(v==0xFFFFFFF0u,"MVN bitwise complements operand");
+c.write_register(0,0xFFFFFFFFu);c.set_flag(Arm9State::Carry,true);
+check(execute_arm_data_processing(c,dp(14,5,true,0,10,0))==StepResult::Executed,"ADCS executes");
+c.read_register(10,&v);check(v==0u&&c.flag(Arm9State::Carry)&&c.flag(Arm9State::Zero),"ADC includes carry-in and updates flags");
+c.write_register(0,0x7FFFFFFFu);
+check(execute_arm_data_processing(c,dp(14,11,true,0,0,1))==StepResult::Executed,"CMN executes");
+check(c.flag(Arm9State::Negative)&&c.flag(Arm9State::Overflow),"CMN updates negative and overflow flags without storing result");
 check(execute_arm_data_processing(c,0xE0600000u)==StepResult::Unsupported,"unsupported opcode rejected");
 check(!arm_condition_passed(c,15),"NV condition rejected");
 std::cout<<"ARM9 interpreter smoke checks completed\n";return 0;}
