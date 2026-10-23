@@ -44,14 +44,17 @@ StepResult execute_arm_data_processing(Arm9State& s,std::uint32_t ins){
  case 0:result=a&b;logical=true;break; // AND
  case 1:result=a^b;logical=true;break; // EOR
  case 2:result=a-b;arithmetic=true;break; // SUB
+ case 3:result=b-a;arithmetic=true;break; // RSB
  case 4:result=a+b;arithmetic=true;break; // ADD
+ case 8:result=a&b;logical=true;writes=false;break; // TST
+ case 9:result=a^b;logical=true;writes=false;break; // TEQ
  case 10:result=a-b;arithmetic=true;writes=false;break; // CMP
  case 12:result=a|b;logical=true;break; // ORR
  case 13:result=b;logical=true;break; // MOV
  default:return StepResult::Unsupported;
  }
  if(writes&&!s.write_register(rd,result))return StepResult::InvalidRegister;
- if(set_flags||!writes){set_nz(s,result);if(arithmetic){if(opcode==2||opcode==10)set_sub_flags(s,a,b,result);else set_add_flags(s,a,b,result);}else s.set_flag(Arm9State::Carry,shcarry);}
+ if(set_flags||!writes){set_nz(s,result);if(arithmetic){if(opcode==2||opcode==10)set_sub_flags(s,a,b,result);else if(opcode==3)set_sub_flags(s,b,a,result);else set_add_flags(s,a,b,result);}else s.set_flag(Arm9State::Carry,shcarry);}
  if(writes&&rd==15u){if(s.read_register(15,&oldpc))s.write_register(15,oldpc&~3u);}
  return StepResult::Executed;
 }
