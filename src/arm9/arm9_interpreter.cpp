@@ -51,6 +51,8 @@ StepResult execute_arm_data_processing(Arm9State& s,std::uint32_t ins){
  case 10:result=a-b;arithmetic=true;writes=false;break; // CMP
  case 12:result=a|b;logical=true;break; // ORR
  case 13:result=b;logical=true;break; // MOV
+ case 14:result=a&~b;logical=true;break; // BIC
+ case 15:result=~b;logical=true;break; // MVN
  default:return StepResult::Unsupported;
  }
  if(writes&&!s.write_register(rd,result))return StepResult::InvalidRegister;
